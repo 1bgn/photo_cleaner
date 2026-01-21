@@ -10,101 +10,243 @@ import 'package:image_picker/image_picker.dart';
 import 'package:injectable/injectable.dart';
 import 'package:signals/signals.dart';
 
+import '../domain/inpaint_service.dart';
+import '../domain/media_save_service.dart';
+import 'mask/brush_models.dart';
+
 @injectable
-class BackgroundBlurController {
-  BackgroundBlurController(
+class EditorController {
+  EditorController(
       this._picker,
+      this._inpaintService,
       this._segmenter,
+      this._mediaSaveService,
       );
 
   final ImagePicker _picker;
+  final InpaintService _inpaintService;
   final SelfieSegmenter _segmenter;
-
-  // ------------------- signals (state) -------------------
+  final MediaSaveService _mediaSaveService;
 
   final imageFile = signal<File?>(null);
   final rawImage = signal<ui.Image?>(null);
   final mask = signal<SegmentationMask?>(null);
-
-  /// Готовая RGBA альфа-маска (в белом цвете, alpha = уверенность)
   final alphaMaskImage = signal<ui.Image?>(null);
 
+  final selectionMode = signal<bool>(false);
   final isProcessing = signal<bool>(false);
   final errorMessage = signal<String?>(null);
 
-  final blurAmount = signal<double>(25.0);
-
+  final blurAmount = signal<double>(0.0);
   final maskFeather = signal<double>(2.0);
-
   final maskThreshold = signal<double>(0.5);
-
   final maskSoftness = signal<double>(0.15);
 
-  // ------------------- internals -------------------
+  final brushEnabled = signal<bool>(false);
+  final brushMode = signal<BrushMode>(BrushMode.add);
+  final brushSize = signal<double>(28.0);
 
-  Timer? _maskRebuildDebounce;
+  final paintTick = signal<int>(0);
+  final userMaskImage = signal<ui.Image?>(null);
+
+  final List<BrushStroke> _strokes = [];
+  BrushStroke? _active;
+
+  Timer? _debounce;
   int _maskBuildToken = 0;
+  int _inpaintToken = 0;
   bool _disposed = false;
 
-  void dispose() {
-    _disposed = true;
-    _maskRebuildDebounce?.cancel();
-    _maskBuildToken++;
+  List<BrushStroke> get strokes => _strokes;
+  BrushStroke? get activeStroke => _active;
 
-    // dispose ui.Image безопасно
-    final r = rawImage.value;
-    final a = alphaMaskImage.value;
+  bool get canDraw => selectionMode.value && brushEnabled.value && !isProcessing.value && !_disposed;
 
-    rawImage.value = null;
-    alphaMaskImage.value = null;
+  void toggleSelectionMode([bool? v]) {
+    final next = v ?? !selectionMode.value;
+    selectionMode.value = next;
+    brushEnabled.value = next && !isProcessing.value;
 
-    if (r != null) _disposeImageAfterFrame(r);
-    if (a != null) _disposeImageAfterFrame(a);
-
-    _segmenter.close();
+    if (!next) {
+      _active = null;
+      paintTick.value++;
+    }
   }
 
-  // ---------------- SAFETY: never dispose image "right now" ----------------
+  void setBrushMode(BrushMode mode) => brushMode.value = mode;
 
-  void _disposeImageAfterFrame(ui.Image img) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      try {
-        img.dispose();
-      } catch (_) {}
+  void clearUserMask() {
+    _strokes.clear();
+    _active = null;
+    _disposeMaskSafely(userMaskImage.value);
+    userMaskImage.value = null;
+    paintTick.value++;
+  }
+
+  void beginStroke(ui.Offset pImageSpace) {
+    if (!canDraw) return;
+
+    final s = BrushStroke(
+      mode: brushMode.value,
+      size: brushSize.value,
+    );
+    s.points.add(pImageSpace);
+    _active = s;
+    paintTick.value++;
+  }
+
+  void appendPoint(ui.Offset pImageSpace) {
+    if (!canDraw) return;
+
+    final a = _active;
+    if (a == null) return;
+
+    if (a.points.isNotEmpty) {
+      final last = a.points.last;
+      if ((last - pImageSpace).distance < 0.8) return;
+    }
+
+    a.points.add(pImageSpace);
+    paintTick.value++;
+  }
+
+  void endStroke({required ui.Image baseImage}) {
+    if (!canDraw) return;
+
+    final a = _active;
+    if (a == null) return;
+
+    _active = null;
+    if (a.points.length >= 2) _strokes.add(a);
+    paintTick.value++;
+
+    if (!_hasAnyAddStroke) return;
+
+    final token = ++_inpaintToken;
+
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 120), () async {
+      await _runInpaint(token: token, baseImage: baseImage);
     });
   }
 
-  void _setRawImageSafely(ui.Image? newImage) {
-    final old = rawImage.value;
-    rawImage.value = newImage;
-    if (old != null && old != newImage) _disposeImageAfterFrame(old);
+  Future<void> _runInpaint({required int token, required ui.Image baseImage}) async {
+    try {
+      if (_disposed || token != _inpaintToken) return;
+
+      brushEnabled.value = false;
+      isProcessing.value = true;
+
+      final m = await _renderMaskImage(width: baseImage.width, height: baseImage.height);
+      if (_disposed || token != _inpaintToken) {
+        m.dispose();
+        return;
+      }
+      _setMaskSafely(m);
+
+      final maskBytes = await exportUserMaskPngBytes();
+      if (maskBytes == null) return;
+
+      final imageBytes = await _exportCurrentImagePngBytes();
+      final resultBytes = await _inpaintService.inpaint(
+        imageBytes: imageBytes,
+        maskBytes: maskBytes,
+      );
+
+      if (_disposed || token != _inpaintToken) return;
+
+      final decoded = await _decodeUiImage(resultBytes);
+      if (_disposed || token != _inpaintToken) {
+        decoded.dispose();
+        return;
+      }
+      _setRawImageSafely(decoded);
+
+      final newFile = await _writeTempResult(resultBytes);
+      imageFile.value = newFile;
+
+      clearUserMask();
+    } catch (e) {
+      errorMessage.value = 'Inpaint error: $e';
+    } finally {
+      if (_disposed) return;
+
+      isProcessing.value = false;
+      if (selectionMode.value) {
+        brushEnabled.value = true;
+      }
+    }
   }
 
-  void _setAlphaMaskSafely(ui.Image? newMask) {
-    final old = alphaMaskImage.value;
-    alphaMaskImage.value = newMask;
-    if (old != null && old != newMask) _disposeImageAfterFrame(old);
+  bool get _hasAnyAddStroke => _strokes.any((s) => s.mode == BrushMode.add);
+
+  Future<void> removeBackgroundLocally() async {
+    final src = rawImage.value;
+    final personMask = alphaMaskImage.value;
+
+    if (src == null) {
+      errorMessage.value = 'Нет изображения';
+      return;
+    }
+    if (personMask == null) {
+      errorMessage.value = 'Нет маски человека';
+      return;
+    }
+
+    try {
+      brushEnabled.value = false;
+      isProcessing.value = true;
+
+      final out = await _renderPersonCutout(
+        src: src,
+        alphaMask: personMask,
+        feather: maskFeather.value,
+      );
+
+      if (_disposed) {
+        out.dispose();
+        return;
+      }
+
+      _setRawImageSafely(out);
+
+      final bytes = await out.toByteData(format: ui.ImageByteFormat.png);
+      if (bytes != null) {
+        final f = await _writeTempResult(bytes.buffer.asUint8List());
+        imageFile.value = f;
+      }
+
+      clearUserMask();
+      selectionMode.value = false;
+      brushEnabled.value = false;
+    } catch (e) {
+      errorMessage.value = 'Ошибка удаления фона: $e';
+    } finally {
+      if (!_disposed) isProcessing.value = false;
+    }
   }
 
-  void clearAll() {
-    _maskRebuildDebounce?.cancel();
-    _maskBuildToken++;
+  Future<String?> saveFinalImageToGallery({String? album}) async {
+    final src = rawImage.value;
+    if (src == null) throw StateError('Нет изображения');
 
-    imageFile.value = null;
-    mask.value = null;
-    errorMessage.value = null;
+    final rendered = await _renderResultImage(
+      src: src,
+      alphaMask: alphaMaskImage.value,
+      blurAmount: blurAmount.value,
+      maskFeather: maskFeather.value,
+    );
 
-    final oldRaw = rawImage.value;
-    final oldMask = alphaMaskImage.value;
+    final bd = await rendered.toByteData(format: ui.ImageByteFormat.png);
+    rendered.dispose();
 
-    rawImage.value = null;
-    alphaMaskImage.value = null;
+    if (bd == null) throw Exception('Не удалось получить байты');
 
-    if (oldRaw != null) _disposeImageAfterFrame(oldRaw);
-    if (oldMask != null) _disposeImageAfterFrame(oldMask);
+    return _mediaSaveService.savePngToGallery(
+      pngBytes: bd.buffer.asUint8List(),
+      album: album,
+    );
   }
-
-  // ------------------- public API -------------------
 
   Future<void> pickAndProcessImage() async {
     if (_disposed) return;
@@ -120,7 +262,6 @@ class BackgroundBlurController {
       );
       if (picked == null) return;
 
-      // очистка предыдущего
       clearAll();
       imageFile.value = File(picked.path);
 
@@ -132,7 +273,6 @@ class BackgroundBlurController {
 
       final inputImage = InputImage.fromFile(imageFile.value!);
       final segMask = await _segmenter.processImage(inputImage);
-
       if (segMask == null) {
         errorMessage.value = 'Не удалось сегментировать изображение';
         return;
@@ -143,7 +283,6 @@ class BackgroundBlurController {
       final frame = await codec.getNextFrame();
       final img = frame.image;
 
-      // build alpha mask
       final alpha = await _buildAlphaMaskImage(
         segMask,
         threshold: maskThreshold.value,
@@ -162,7 +301,7 @@ class BackgroundBlurController {
     } catch (e) {
       errorMessage.value = 'Ошибка: $e';
     } finally {
-      isProcessing.value = false;
+      if (!_disposed) isProcessing.value = false;
     }
   }
 
@@ -174,7 +313,6 @@ class BackgroundBlurController {
     maskFeather.value = feather;
     maskThreshold.value = threshold;
     maskSoftness.value = softness;
-
     scheduleAlphaMaskRebuild();
   }
 
@@ -183,9 +321,9 @@ class BackgroundBlurController {
     if (currentMask == null || _disposed) return;
 
     final token = ++_maskBuildToken;
-    _maskRebuildDebounce?.cancel();
+    _debounce?.cancel();
 
-    _maskRebuildDebounce = Timer(const Duration(milliseconds: 120), () async {
+    _debounce = Timer(const Duration(milliseconds: 120), () async {
       final built = await _buildAlphaMaskImage(
         currentMask,
         threshold: maskThreshold.value,
@@ -201,32 +339,162 @@ class BackgroundBlurController {
     });
   }
 
-  Future<File> renderAndSaveToTempPng() async {
-    final src = rawImage.value;
-    if (src == null) {
-      throw StateError('Нет изображения для сохранения');
-    }
+  void clearAll() {
+    _debounce?.cancel();
+    _maskBuildToken++;
+    _inpaintToken++;
 
-    final rendered = await _renderResultImage(
-      src: src,
-      alphaMask: alphaMaskImage.value,
-      blurAmount: blurAmount.value,
-      maskFeather: maskFeather.value,
-    );
+    imageFile.value = null;
+    mask.value = null;
+    errorMessage.value = null;
 
-    final byteData = await rendered.toByteData(format: ui.ImageByteFormat.png);
-    rendered.dispose();
+    final oldRaw = rawImage.value;
+    final oldAlpha = alphaMaskImage.value;
+    final oldUserMask = userMaskImage.value;
 
-    if (byteData == null) throw Exception('Не удалось получить байты изображения');
+    rawImage.value = null;
+    alphaMaskImage.value = null;
+    userMaskImage.value = null;
 
-    final tempDir = await Directory.systemTemp.createTemp();
-    final outputFile = File('${tempDir.path}/blurred_output.png');
-    await outputFile.writeAsBytes(byteData.buffer.asUint8List());
+    if (oldRaw != null) _disposeImageAfterFrame(oldRaw);
+    if (oldAlpha != null) _disposeImageAfterFrame(oldAlpha);
+    if (oldUserMask != null) _disposeMaskSafely(oldUserMask);
 
-    return outputFile;
+    _strokes.clear();
+    _active = null;
+    paintTick.value++;
   }
 
-  // ------------------- rendering + mask build -------------------
+  void dispose() {
+    _disposed = true;
+    _debounce?.cancel();
+    _maskBuildToken++;
+    _inpaintToken++;
+
+    final r = rawImage.value;
+    final a = alphaMaskImage.value;
+    final u = userMaskImage.value;
+
+    rawImage.value = null;
+    alphaMaskImage.value = null;
+    userMaskImage.value = null;
+
+    if (r != null) _disposeImageAfterFrame(r);
+    if (a != null) _disposeImageAfterFrame(a);
+    if (u != null) _disposeMaskSafely(u);
+
+    _segmenter.close();
+  }
+
+  Future<Uint8List?> exportUserMaskPngBytes() async {
+    final img = userMaskImage.value;
+    if (img == null) return null;
+    final bd = await img.toByteData(format: ui.ImageByteFormat.png);
+    return bd?.buffer.asUint8List();
+  }
+
+  Future<Uint8List> _exportCurrentImagePngBytes() async {
+    final img = rawImage.value;
+    if (img == null) throw StateError('No image');
+    final bd = await img.toByteData(format: ui.ImageByteFormat.png);
+    if (bd == null) throw Exception('Failed to encode image');
+    return bd.buffer.asUint8List();
+  }
+
+  Future<File> _writeTempResult(Uint8List bytes) async {
+    final dir = await Directory.systemTemp.createTemp('edited_');
+    final file = File('${dir.path}/result.png');
+    await file.writeAsBytes(bytes, flush: true);
+    return file;
+  }
+
+  Future<ui.Image> _decodeUiImage(Uint8List bytes) async {
+    final codec = await ui.instantiateImageCodec(bytes);
+    final frame = await codec.getNextFrame();
+    return frame.image;
+  }
+
+  Future<ui.Image> _renderMaskImage({
+    required int width,
+    required int height,
+  }) async {
+    final recorder = ui.PictureRecorder();
+    final canvas = ui.Canvas(recorder);
+    final rect = ui.Rect.fromLTWH(0, 0, width.toDouble(), height.toDouble());
+
+    canvas.drawRect(rect, ui.Paint()..color = const ui.Color(0xFF000000));
+
+    void drawStroke(BrushStroke s) {
+      if (s.points.length < 2) return;
+
+      final paint = ui.Paint()
+        ..style = ui.PaintingStyle.stroke
+        ..strokeWidth = s.size
+        ..strokeCap = ui.StrokeCap.round
+        ..strokeJoin = ui.StrokeJoin.round
+        ..isAntiAlias = true
+        ..blendMode = ui.BlendMode.srcOver;
+
+      paint.color = (s.mode == BrushMode.add)
+          ? const ui.Color(0xFFFFFFFF)
+          : const ui.Color(0xFF000000);
+
+      final path = ui.Path()..moveTo(s.points[0].dx, s.points[0].dy);
+      for (int i = 1; i < s.points.length; i++) {
+        path.lineTo(s.points[i].dx, s.points[i].dy);
+      }
+      canvas.drawPath(path, paint);
+    }
+
+    for (final s in _strokes) {
+      drawStroke(s);
+    }
+    if (_active != null) drawStroke(_active!);
+
+    final picture = recorder.endRecording();
+    final img = await picture.toImage(width, height);
+    picture.dispose();
+    return img;
+  }
+
+  Future<ui.Image> _renderPersonCutout({
+    required ui.Image src,
+    required ui.Image alphaMask,
+    required double feather,
+  }) async {
+    final recorder = ui.PictureRecorder();
+    final canvas = ui.Canvas(recorder);
+    final rect = ui.Rect.fromLTWH(0, 0, src.width.toDouble(), src.height.toDouble());
+
+    canvas.saveLayer(rect, ui.Paint());
+    canvas.drawImage(src, ui.Offset.zero, ui.Paint()..filterQuality = ui.FilterQuality.high);
+
+    final maskRect = ui.Rect.fromLTWH(
+      0,
+      0,
+      alphaMask.width.toDouble(),
+      alphaMask.height.toDouble(),
+    );
+
+    canvas.drawImageRect(
+      alphaMask,
+      maskRect,
+      rect,
+      ui.Paint()
+        ..isAntiAlias = true
+        ..blendMode = ui.BlendMode.dstIn
+        ..imageFilter = (feather > 0)
+            ? ui.ImageFilter.blur(sigmaX: feather, sigmaY: feather)
+            : null,
+    );
+
+    canvas.restore();
+
+    final pic = recorder.endRecording();
+    final img = await pic.toImage(src.width, src.height);
+    pic.dispose();
+    return img;
+  }
 
   Future<ui.Image> _buildAlphaMaskImage(
       SegmentationMask segMask, {
@@ -288,7 +556,6 @@ class BackgroundBlurController {
       src.height.toDouble(),
     );
 
-    // 1) blurred bg
     canvas.drawImage(
       src,
       Offset.zero,
@@ -297,7 +564,6 @@ class BackgroundBlurController {
         ..imageFilter = ui.ImageFilter.blur(sigmaX: blurAmount, sigmaY: blurAmount),
     );
 
-    // 2) sharp person
     if (alphaMask != null) {
       canvas.saveLayer(fullRect, Paint());
 
@@ -333,5 +599,41 @@ class BackgroundBlurController {
     final img = await picture.toImage(src.width, src.height);
     picture.dispose();
     return img;
+  }
+
+  void _disposeImageAfterFrame(ui.Image img) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      try {
+        img.dispose();
+      } catch (_) {}
+    });
+  }
+
+  void _disposeMaskSafely(ui.Image? img) {
+    if (img == null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      try {
+        img.dispose();
+      } catch (_) {}
+    });
+  }
+
+  void _setRawImageSafely(ui.Image? newImage) {
+    final old = rawImage.value;
+    rawImage.value = newImage;
+    if (old != null && old != newImage) _disposeImageAfterFrame(old);
+  }
+
+  void _setAlphaMaskSafely(ui.Image? newMask) {
+    final old = alphaMaskImage.value;
+    alphaMaskImage.value = newMask;
+    if (old != null && old != newMask) _disposeImageAfterFrame(old);
+  }
+
+  void _setMaskSafely(ui.Image newMask) {
+    final old = userMaskImage.value;
+    userMaskImage.value = newMask;
+    if (old != null && old != newMask) _disposeMaskSafely(old);
+    paintTick.value++;
   }
 }

@@ -5,7 +5,7 @@ import '../editor_controller.dart';
 
 class BlurStrengthSlider extends StatelessWidget {
   const BlurStrengthSlider({super.key, required this.controller});
-  final BackgroundBlurController controller;
+  final EditorController controller;
 
   @override
   Widget build(BuildContext context) {

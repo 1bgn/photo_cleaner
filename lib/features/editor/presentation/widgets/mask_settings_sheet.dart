@@ -5,7 +5,7 @@ import '../editor_controller.dart';
 class MaskSettingsSheet extends StatefulWidget {
   const MaskSettingsSheet({super.key, required this.controller});
 
-  final BackgroundBlurController controller;
+  final EditorController controller;
 
   @override
   State<MaskSettingsSheet> createState() => _MaskSettingsSheetState();

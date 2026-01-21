@@ -3,22 +3,25 @@ import 'package:signals/signals_flutter.dart';
 
 import '../editor_controller.dart';
 import 'background_blur_painter.dart';
+import 'mask_brush_overlay.dart'; // <-- добавь
 
 class ImagePreview extends StatelessWidget {
   const ImagePreview({super.key, required this.controller});
 
-  final BackgroundBlurController controller;
+  final EditorController controller;
 
   @override
   Widget build(BuildContext context) {
-
-    return Watch((context, ) {
+    return Watch((context) {
       final img = controller.rawImage.watch(context);
       if (img == null) return const SizedBox.shrink();
 
       final mask = controller.alphaMaskImage.watch(context);
       final blur = controller.blurAmount.watch(context);
       final feather = controller.maskFeather.watch(context);
+
+      // переключатель режима (сигнал в контроллере)
+      final selection = controller.selectionMode.watch(context);
 
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -45,13 +48,26 @@ class ImagePreview extends StatelessWidget {
               child: SizedBox(
                 width: drawW,
                 height: drawH,
-                child: CustomPaint(
-                  painter: BackgroundBlurPainter(
-                    image: img,
-                    alphaMask: mask,
-                    blurAmount: blur,
-                    maskFeather: feather,
-                  ),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    // базовый слой (твой blur)
+                    CustomPaint(
+                      painter: BackgroundBlurPainter(
+                        image: img,
+                        alphaMask: mask,
+                        blurAmount: blur,
+                        maskFeather: feather,
+                      ),
+                    ),
+
+                    // слой выделения кистью
+                    if (selection)
+                      MaskBrushOverlay(
+                        controller: controller,
+                        image: img,
+                      ),
+                  ],
                 ),
               ),
             );

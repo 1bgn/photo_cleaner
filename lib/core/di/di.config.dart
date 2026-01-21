@@ -15,10 +15,13 @@ import 'package:google_mlkit_selfie_segmentation/google_mlkit_selfie_segmentatio
 import 'package:image_picker/image_picker.dart' as _i183;
 import 'package:injectable/injectable.dart' as _i526;
 
-import '../../features/editor/application/usecases/pick_image_uc.dart' as _i726;
-import '../../features/editor/data/file_picker_adapter.dart' as _i842;
-import '../../features/editor/domain/image_picker_port.dart' as _i829;
+import '../../features/editor/data/inpaint_service_impl.dart' as _i879;
+import '../../features/editor/data/media_save_service_impl.dart' as _i798;
+import '../../features/editor/domain/inpaint_service.dart' as _i888;
+import '../../features/editor/domain/media_save_service.dart' as _i82;
 import '../../features/editor/presentation/editor_controller.dart' as _i819;
+import '../network/dio_factory.dart' as _i798;
+import '../network/retrofit_clients.dart' as _i401;
 import 'app_module.dart' as _i460;
 
 extension GetItInjectableX on _i174.GetIt {
@@ -33,15 +36,21 @@ extension GetItInjectableX on _i174.GetIt {
       () => registerModule.provideSelfieSegmenter(),
     );
     gh.lazySingleton<_i183.ImagePicker>(() => registerModule.imagePicker);
-    gh.factory<_i819.BackgroundBlurController>(
-      () => _i819.BackgroundBlurController(
-        gh<_i183.ImagePicker>(),
-        gh<_i254.SelfieSegmenter>(),
-      ),
+    gh.lazySingleton<_i798.DioFactory>(() => registerModule.dioFactory);
+    gh.lazySingleton<_i401.CleanerInpaintClient>(
+      () => registerModule.cleanerInpaintClient(gh<_i798.DioFactory>()),
     );
-    gh.lazySingleton<_i829.ImagePickerPort>(() => _i842.FilePickerAdapter());
-    gh.factory<_i726.PickImageUc>(
-      () => _i726.PickImageUc(gh<_i829.ImagePickerPort>()),
+    gh.lazySingleton<_i82.MediaSaveService>(() => _i798.MediaSaveServiceImpl());
+    gh.lazySingleton<_i888.InpaintService>(
+      () => _i879.InpaintServiceImpl(gh<_i401.CleanerInpaintClient>()),
+    );
+    gh.factory<_i819.EditorController>(
+      () => _i819.EditorController(
+        gh<_i183.ImagePicker>(),
+        gh<_i888.InpaintService>(),
+        gh<_i254.SelfieSegmenter>(),
+        gh<_i82.MediaSaveService>(),
+      ),
     );
     return this;
   }

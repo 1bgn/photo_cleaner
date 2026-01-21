@@ -10,7 +10,7 @@ class ActionFabs extends StatelessWidget {
     required this.onSave,
   });
 
-  final BackgroundBlurController controller;
+  final EditorController controller;
   final Future<void> Function() onSave;
 
   @override
