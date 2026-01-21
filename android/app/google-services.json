@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "971428073899",
+    "project_id": "photocleaner-ca8bc",
+    "storage_bucket": "photocleaner-ca8bc.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:971428073899:android:c19d5689e81527e2ffc2ee",
+        "android_client_info": {
+          "package_name": "com.b7am.photo_cleaner"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAnnXnjczl0cJFw62cOag-dx4_vzlMpVlw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
