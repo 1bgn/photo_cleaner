@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:gal/gal.dart';
 import 'package:injectable/injectable.dart';
 
-import '../domain/media_save_service.dart';
+import '../application/media_save_service.dart';
 
 @LazySingleton(as: MediaSaveService)
 class MediaSaveServiceImpl implements MediaSaveService {

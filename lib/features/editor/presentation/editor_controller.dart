@@ -10,8 +10,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:injectable/injectable.dart';
 import 'package:signals/signals.dart';
 
-import '../domain/inpaint_service.dart';
-import '../domain/media_save_service.dart';
+import '../application/inpaint_service.dart';
+import '../application/media_save_service.dart';
 import 'mask/brush_models.dart';
 
 @injectable
