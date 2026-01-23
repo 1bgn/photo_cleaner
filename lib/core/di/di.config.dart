@@ -23,6 +23,9 @@ import '../../features/editor/data/repository/media_repository_impl.dart'
     as _i816;
 import '../../features/editor/domain/repository/media_repository.dart' as _i60;
 import '../../features/editor/presentation/editor_controller.dart' as _i819;
+import '../../features/gallery/data/local_gallery_service_impl.dart' as _i374;
+import '../../features/gallery/domain/local_gallery_service.dart' as _i324;
+import '../../features/gallery/presentation/gallery_controller.dart' as _i759;
 import '../network/dio_factory.dart' as _i798;
 import '../network/retrofit_clients.dart' as _i401;
 import 'app_module.dart' as _i460;
@@ -46,11 +49,17 @@ extension GetItInjectableX on _i174.GetIt {
     gh.lazySingleton<_i401.CleanerInpaintClient>(
       () => registerModule.cleanerInpaintClient(gh<_i798.DioFactory>()),
     );
+    gh.lazySingleton<_i324.LocalGalleryService>(
+      () => _i374.LocalGalleryServiceImpl(),
+    );
     gh.lazySingleton<_i60.MediaRepository>(
       () => _i816.MediaRepositoryImpl(gh<_i401.CleanerInpaintClient>()),
     );
     gh.lazySingleton<_i193.InpaintService>(
       () => _i879.InpaintServiceImpl(gh<_i60.MediaRepository>()),
+    );
+    gh.factory<_i759.GalleryController>(
+      () => _i759.GalleryController(gh<_i324.LocalGalleryService>()),
     );
     gh.factory<_i819.EditorController>(
       () => _i819.EditorController(
@@ -58,6 +67,7 @@ extension GetItInjectableX on _i174.GetIt {
         gh<_i193.InpaintService>(),
         gh<_i254.SelfieSegmenter>(),
         gh<_i646.MediaSaveService>(),
+        gh<_i324.LocalGalleryService>(),
       ),
     );
     return this;

@@ -10,6 +10,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:injectable/injectable.dart';
 import 'package:signals/signals.dart';
 
+import '../../gallery/domain/local_gallery_service.dart';
 import '../application/inpaint_service.dart';
 import '../application/media_save_service.dart';
 import 'mask/brush_models.dart';
@@ -20,14 +21,14 @@ class EditorController {
       this._picker,
       this._inpaintService,
       this._segmenter,
-      this._mediaSaveService,
+      this._mediaSaveService, this._localGalleryService,
       );
 
   final ImagePicker _picker;
   final InpaintService _inpaintService;
   final SelfieSegmenter _segmenter;
   final MediaSaveService _mediaSaveService;
-
+  final LocalGalleryService _localGalleryService;
   final imageFile = signal<File?>(null);
   final rawImage = signal<ui.Image?>(null);
   final mask = signal<SegmentationMask?>(null);
@@ -61,6 +62,38 @@ class EditorController {
   BrushStroke? get activeStroke => _active;
 
   bool get canDraw => selectionMode.value && brushEnabled.value && !isProcessing.value && !_disposed;
+
+  Future<void> saveToLocalGallery({bool asDisplayed = true}) async {
+    final src = rawImage.value;
+    if (src == null) throw StateError('Нет изображения');
+
+    ui.Image imgToSave;
+
+    if (asDisplayed) {
+      imgToSave = await _renderResultImage(
+        src: src,
+        alphaMask: alphaMaskImage.value,
+        blurAmount: blurAmount.value,
+        maskFeather: maskFeather.value,
+      );
+    } else {
+      imgToSave = src;
+    }
+
+    try {
+      final bd = await imgToSave.toByteData(format: ui.ImageByteFormat.png);
+      if (asDisplayed) imgToSave.dispose();
+      if (bd == null) throw Exception('Не удалось получить байты');
+
+      await _localGalleryService.savePng(bd.buffer.asUint8List());
+    } catch (_) {
+      if (asDisplayed) {
+        try { imgToSave.dispose(); } catch (_) {}
+      }
+      rethrow;
+    }
+  }
+
 
   void toggleSelectionMode([bool? v]) {
     final next = v ?? !selectionMode.value;

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:signals/signals_flutter.dart';
 
 import '../../../core/di/di.dart';
+import '../../gallery/presentation/gallery_screen.dart';
 import 'editor_controller.dart';
 import 'widgets/action_fabs.dart';
 import 'widgets/blur_strength_slider.dart';
@@ -34,34 +35,80 @@ class _EditorScreenState extends State<EditorScreen> {
   Future<void> _onSave() async {
     if (c.rawImage.value == null) return;
 
-    final ok = await showDialog<bool>(
+    // 0 = cancel, 1 = local, 2 = device, 3 = open local gallery
+    final choice = await showDialog<int>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Сохранить результат'),
-        content: const Text('Сохранить изображение в Галерею?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Отмена'),
+      builder: (context) => SimpleDialog(
+        title: const Text('Сохранить'),
+        children: [
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(context, 1),
+            child: const ListTile(
+              leading: Icon(Icons.folder),
+              title: Text('В локальную галерею'),
+              subtitle: Text('Сохранится внутри приложения'),
+            ),
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Сохранить'),
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(context, 2),
+            child: const ListTile(
+              leading: Icon(Icons.photo),
+              title: Text('В галерею устройства'),
+              subtitle: Text('Photos / Gallery'),
+            ),
+          ),
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(context, 3),
+            child: const ListTile(
+              leading: Icon(Icons.photo_library_outlined),
+              title: Text('Открыть локальную галерею'),
+            ),
+          ),
+          const Divider(height: 1),
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(context, 0),
+            child: const Align(
+              alignment: Alignment.centerRight,
+              child: Text('Отмена'),
+            ),
           ),
         ],
       ),
     );
 
-    if (ok != true) return;
+    if (!mounted) return;
+    if (choice == null || choice == 0) return;
+
+    if (choice == 3) {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const GalleryScreen()),
+      );
+      return;
+    }
+
+    if (c.isProcessing.value) return;
 
     try {
       c.isProcessing.value = true;
-      final savedPath = await c.saveFinalImageToGallery();
 
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Сохранено: ${savedPath ?? "успешно"}')),
-      );
+      if (choice == 1) {
+        await c.saveToLocalGallery(asDisplayed: true);
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Сохранено в локальную галерею')),
+        );
+        return;
+      }
+
+      if (choice == 2) {
+        final savedPath = await c.saveFinalImageToGallery();
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Сохранено: ${savedPath ?? "успешно"}')),
+        );
+        return;
+      }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -71,6 +118,7 @@ class _EditorScreenState extends State<EditorScreen> {
       c.isProcessing.value = false;
     }
   }
+
 
   Future<void> _openMaskSettings() async {
     if (!mounted) return;
@@ -94,6 +142,18 @@ class _EditorScreenState extends State<EditorScreen> {
       return Scaffold(
         appBar: AppBar(
           actions: [
+            IconButton(
+              key: Key("1"),
+              tooltip: 'Локальная галерея',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const GalleryScreen()),
+                );
+              },
+              icon: const Icon(Icons.photo_library_outlined),
+            ),
+
             IconButton(
               tooltip: 'Настройки маски',
               onPressed: (raw == null || busy) ? null : _openMaskSettings,

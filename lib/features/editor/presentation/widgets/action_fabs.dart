@@ -26,12 +26,15 @@ class ActionFabs extends StatelessWidget {
           children: [
             if (hasImage)
               FloatingActionButton.small(
+                heroTag: 'fab_save',
                 onPressed: isProcessing ? null : onSave,
                 backgroundColor: Colors.green,
                 child: const Icon(Icons.save, size: 20),
               ),
             const SizedBox(height: 16),
             FloatingActionButton(
+              heroTag: 'fab_pic',
+
               onPressed: isProcessing ? null : controller.pickAndProcessImage,
               backgroundColor: isProcessing ? Colors.grey : Colors.blue,
               child: isProcessing
