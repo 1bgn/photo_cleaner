@@ -1,7 +1,7 @@
 import 'package:injectable/injectable.dart';
 import 'package:signals/signals.dart';
 
-import '../domain/local_gallery_item.dart';
+import '../domain/models/local_gallery_item.dart';
 import '../domain/local_gallery_service.dart';
 
 @injectable

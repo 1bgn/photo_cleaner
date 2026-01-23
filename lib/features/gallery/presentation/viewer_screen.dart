@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 
-import '../domain/local_gallery_item.dart';
+import '../domain/models/local_gallery_item.dart';
 
 class ViewerScreen extends StatelessWidget {
   const ViewerScreen({super.key, required this.item});

@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:signals/signals_flutter.dart';
 
 import '../../../core/di/di.dart';
-import '../domain/local_gallery_item.dart';
+import '../domain/models/local_gallery_item.dart';
 import 'gallery_controller.dart';
 import 'viewer_screen.dart';
 
