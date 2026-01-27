@@ -35,7 +35,7 @@ dependencies:
   get_it: ^9.2.0
   retrofit: ^4.9.2
   injectable: ^2.7.1+4
-
+  easy_localization: ^3.0.8
   file_picker: ^10.3.8
   google_mlkit_face_detection: ^0.13.1
   google_mlkit_selfie_segmentation: ^0.10.0
@@ -74,6 +74,7 @@ dev_dependencies:
 flutter:
   assets:
     - assets/
+    - assets/translations/
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.

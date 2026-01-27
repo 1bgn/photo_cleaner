@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
 class EmptyState extends StatelessWidget {
@@ -10,7 +11,7 @@ class EmptyState extends StatelessWidget {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Text('Выберите фото'),
+         Text('chosePhoto').tr(),
         if (errorText != null)
           Padding(
             padding: const EdgeInsets.only(top: 16),
