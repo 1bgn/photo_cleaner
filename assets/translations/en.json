@@ -1,5 +1,7 @@
 {
   "title": "Hello",
   "welcome_message": "Welcome to the app",
-  "chosePhoto": "Choose a photo"
+  "chosePhoto": "Choose a photo",
+  "localGallery": "Local gallery",
+  "hereIsEmpty": "It's empty for now."
 }

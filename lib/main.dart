@@ -1,3 +1,4 @@
+import 'package:apphud/apphud.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:photo_cleaner/core/di/di.dart';
@@ -7,6 +8,8 @@ import 'package:photo_cleaner/features/editor/presentation/editor_screen.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await EasyLocalization.ensureInitialized();
+  await Apphud.start(apiKey: "app_Z44sHCCXqhP5FCBDa8SxKBLB7VLpga");
+
   configureDependencies();
   runApp(EasyLocalization(child: const MyApp(), supportedLocales: [Locale("ru"),Locale("en")],fallbackLocale: Locale("ru"), path: 'assets/translations'));
 }

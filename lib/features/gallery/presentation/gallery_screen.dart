@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:signals/signals_flutter.dart';
 
@@ -34,7 +35,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
 
       return Scaffold(
         appBar: AppBar(
-          title: const Text('Локальная галерея'),
+          title:  Text('localGallery'.tr()),
           actions: [
             IconButton(
               tooltip: 'Очистить',
@@ -68,7 +69,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
               ),
             Expanded(
               child: items.isEmpty
-                  ? const Center(child: Text('Пока пусто'))
+                  ?  Center(child: Text('hereIsEmpty'.tr()))
                   : GridView.builder(
                 padding: const EdgeInsets.all(12),
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(

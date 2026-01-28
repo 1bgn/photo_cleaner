@@ -1,5 +1,7 @@
 {
   "title": "Привет",
   "welcome_message": "Добро пожаловать в приложение",
-  "chosePhoto": "Выберите фото"
+  "chosePhoto": "Выберите фото",
+  "localGallery": "Локальная галерея",
+  "hereIsEmpty": "Пока пусто"
 }
