@@ -50,7 +50,12 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
   apphud: ^3.0.1
-
+  firebase_core: ^4.4.0
+  firebase_analytics: ^12.1.1
+  appsflyer_sdk: ^6.17.8
+  appmetrica_plugin: ^3.4.0
+  google_mobile_ads: ^7.0.0
+  android_id: ^0.5.1
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -61,9 +66,9 @@ dev_dependencies:
   json_serializable: any
   injectable_generator: any
   change_app_package_name: ^1.5.0
-  apphud: ^3.0.1
 
-  appsflyer_sdk: ^6.17.8
+
+
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is

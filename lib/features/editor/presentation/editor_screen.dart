@@ -3,6 +3,8 @@ import 'package:signals/signals_flutter.dart';
 
 import '../../../core/di/di.dart';
 import '../../gallery/presentation/gallery_screen.dart';
+import '../../monetization/presentation/main_paywall_sheet.dart';
+import '../../monetization/presentation/monetization_controller.dart';
 import 'editor_controller.dart';
 import 'widgets/action_fabs.dart';
 import 'widgets/blur_strength_slider.dart';
@@ -34,8 +36,15 @@ class _EditorScreenState extends State<EditorScreen> {
 
   Future<void> _onSave() async {
     if (c.rawImage.value == null) return;
-
-    // 0 = cancel, 1 = local, 2 = device, 3 = open local gallery
+    //показ банеера
+    // final m = getIt<MonetizationController>();
+    // await m.init();
+    //
+    // if (!m.hasPremium.value) {
+      await MainPaywallSheet.show(context);
+    //   await m.refreshStatus();
+    //   if (!m.hasPremium.value) return; // не купил → не сохраняем
+    // }
     final choice = await showDialog<int>(
       context: context,
       builder: (context) => SimpleDialog(

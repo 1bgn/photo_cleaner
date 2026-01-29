@@ -2,13 +2,15 @@ import 'dart:io';
 
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:photo_cleaner/core/event_keys/event_keys.dart';
 import 'package:signals/signals_flutter.dart';
 
 import '../../../core/di/di.dart';
 import '../domain/models/local_gallery_item.dart';
 import 'gallery_controller.dart';
 import 'viewer_screen.dart';
-
+import 'package:appmetrica_plugin/appmetrica_plugin.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 class GalleryScreen extends StatefulWidget {
   const GalleryScreen({super.key});
 
@@ -18,12 +20,15 @@ class GalleryScreen extends StatefulWidget {
 
 class _GalleryScreenState extends State<GalleryScreen> {
   late final GalleryController c;
-
   @override
   void initState() {
     super.initState();
     c = getIt<GalleryController>();
     c.load();
+    c.initBanner();
+    AppMetrica.reportEvent(EventKeys.openGalleryEvent);
+
+
   }
 
   @override
@@ -61,6 +66,12 @@ class _GalleryScreenState extends State<GalleryScreen> {
         ),
         body: Column(
           children: [
+            if (c.bannerAd.value != null)
+              SizedBox(
+                height: c.bannerAd.value!.size.height.toDouble(),
+                width: c.bannerAd.value!.size.width.toDouble(),
+                child: AdWidget(ad: c.bannerAd.value!),
+              ),
             if (loading) const LinearProgressIndicator(),
             if (err != null)
               Padding(
@@ -81,6 +92,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
                 itemBuilder: (_, i) => _Thumb(
                   item: items[i],
                   onOpen: () async {
+
                     await Navigator.push(
                       context,
                       MaterialPageRoute(builder: (_) => ViewerScreen(item: items[i])),

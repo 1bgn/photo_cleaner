@@ -1,16 +1,61 @@
 # photo_cleaner
 
-A new Flutter project.
+Модель монетизации
 
-## Getting Started
+1) Hybrid: Ads + Subscription
 
-This project is a starting point for a Flutter application.
+Free: базовый функционал + реклама
 
-A few resources to get you started if this is your first Flutter project:
+Premium (weekly/monthly): полное отключение рекламы + “про-плюшки” (например: HD экспорт, больше лимитов обработок, ускорение очереди)
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+Гейтинг рекламы делаем по Apphud.hasPremiumAccess() (и/или hasActiveSubscription).
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+======
+
+2) Рекламные форматы и где их показывать
+   A) Rewarded (приоритет №1, лучший UX)
+
+Использование: “получи X за просмотр”
+Подходит идеально под твой продукт:
+
++1 бесплатная обработка inpaint
+
+экспорт в HD (если ограничишь free)
+
+“удалить watermark”
+
+“сохранить без ограничения” (если вводишь лимит)
+
+Точки показа:
+
+перед запуском “дорогой” операции (inpaint)
+
+перед HD экспортом
+
+B) Interstitial (осторожно, только на “границах”)
+
+Точки показа:
+
+после успешного сохранения
+
+после завершения обработки (но НЕ во время рисования кистью/не в середине flow)
+
+Частотный лимит (пример):
+
+не чаще 1 раза в 2–3 минуты и/или не чаще чем раз в N обработок (например, раз в 3)
+
+==========
+
+3) Paywall стратегия (через Apphud placements/paywalls)
+
+У тебя есть main_paywall и продукты sonicforge_weekly / sonicforge_monthly.
+
+Когда показывать paywall:
+
+Onboarding / after value moment: после 1 успешной обработки (пользователь увидел результат)
+
+Перед ограничением: если вводишь лимит free-операций (например 3 inpaint/день)
+
+Remove Ads: после нескольких показов interstitial (мягкий upsell)
+
+Технично: paywall и продукты берёшь из paywall.products, покупки через Apphud.purchase, восстановление через restorePurchases.

@@ -3,11 +3,12 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
-
+import 'package:appmetrica_plugin/appmetrica_plugin.dart';
 import 'package:flutter/widgets.dart';
 import 'package:google_mlkit_selfie_segmentation/google_mlkit_selfie_segmentation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:injectable/injectable.dart';
+import 'package:photo_cleaner/core/event_keys/event_keys.dart';
 import 'package:signals/signals.dart';
 
 import '../../gallery/domain/local_gallery_service.dart';
@@ -86,6 +87,8 @@ class EditorController {
       if (bd == null) throw Exception('Не удалось получить байты');
 
       await _localGalleryService.savePng(bd.buffer.asUint8List());
+      AppMetrica.reportEvent(EventKeys.saveToGallery);
+
     } catch (_) {
       if (asDisplayed) {
         try { imgToSave.dispose(); } catch (_) {}
@@ -96,6 +99,7 @@ class EditorController {
 
 
   void toggleSelectionMode([bool? v]) {
+    AppMetrica.reportEvent(EventKeys.toggleSelectionMode);
     final next = v ?? !selectionMode.value;
     selectionMode.value = next;
     brushEnabled.value = next && !isProcessing.value;
@@ -250,6 +254,7 @@ class EditorController {
       }
 
       clearUserMask();
+      AppMetrica.reportEvent(EventKeys.clearByMask);
       selectionMode.value = false;
       brushEnabled.value = false;
     } catch (e) {
