@@ -17,6 +17,7 @@ class MonetizationController {
   final error = signal<String?>(null);
 
   final hasPremium = signal<bool>(false);
+  final hasSubcription = signal<bool>(false);
   final paywall = signal<ApphudPaywall?>(null);
 
   Future<void> init() async {
@@ -30,6 +31,7 @@ class MonetizationController {
       await refreshStatus();
 
       paywall.value = await _service.getPaywall('main_paywall');
+      // print("FVREWVDSVsdv ${(await _service.getPlacements()).first}");
       isReady.value = true;
     } catch (e) {
       error.value = '$e';
@@ -42,7 +44,11 @@ class MonetizationController {
     final premium = await _service.hasPremiumAccess();
     hasPremium.value = premium;
   }
-
+  Future<bool> hasActiveSubscription() async {
+    final sub = await _service.hasActiveSubscription();
+    hasSubcription.value = sub;
+    return sub;
+  }
   Future<void> buyWeekly() => _buyByProductId('sonicforge_weekly');
   Future<void> buyMonthly() => _buyByProductId('sonicforge_monthly');
 
@@ -61,8 +67,9 @@ class MonetizationController {
     try {
       isBusy.value = true;
       error.value = null;
-
       final result = await _service.purchase(product: product);
+      print("VDSVSDVsdvsd ${result}");
+
       if (result.error != null) {
         error.value = result.error!.message ?? 'Purchase failed';
         return;
@@ -70,6 +77,8 @@ class MonetizationController {
 
       await refreshStatus();
     } catch (e) {
+      print("eeerrrear ${e}");
+
       error.value = '$e';
     } finally {
       isBusy.value = false;
@@ -82,7 +91,8 @@ class MonetizationController {
       error.value = null;
       await _service.restorePurchases();
       await refreshStatus();
-    } catch (e) {
+    } catch (e,stacktrace) {
+      print("VDSVDSVDS ${e} ${stacktrace}");
       error.value = '$e';
     } finally {
       isBusy.value = false;

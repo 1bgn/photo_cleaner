@@ -37,14 +37,18 @@ class _EditorScreenState extends State<EditorScreen> {
   Future<void> _onSave() async {
     if (c.rawImage.value == null) return;
     //показ банеера
-    // final m = getIt<MonetizationController>();
-    // await m.init();
-    //
-    // if (!m.hasPremium.value) {
+    final m = getIt<MonetizationController>();
+    await m.init();
+
+    if (!m.hasPremium.value) {
       await MainPaywallSheet.show(context);
-    //   await m.refreshStatus();
-    //   if (!m.hasPremium.value) return; // не купил → не сохраняем
-    // }
+      await m.refreshStatus();
+      m.hasActiveSubscription().then((e){
+        print("vreabvaer ${e}");
+        print("vreabvaer ${m.hasPremium}");
+      });
+      if (!m.hasPremium.value) return;
+    }
     final choice = await showDialog<int>(
       context: context,
       builder: (context) => SimpleDialog(
@@ -151,6 +155,7 @@ class _EditorScreenState extends State<EditorScreen> {
       return Scaffold(
         appBar: AppBar(
           actions: [
+
             IconButton(
               key: Key("1"),
               tooltip: 'Локальная галерея',

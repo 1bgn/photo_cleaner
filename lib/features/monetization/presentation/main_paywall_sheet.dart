@@ -84,7 +84,7 @@ class _MainPaywallSheetState extends State<MainPaywallSheet> {
 
       final maxH = MediaQuery.of(context).size.height * 0.85;
 
-      // ✅ Ранний return — так проще и без ошибок в children
+
       if (premium) {
         return SafeArea(
           child: ConstrainedBox(
@@ -274,21 +274,37 @@ class _PlanTile extends StatelessWidget {
         ),
       ),
       child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        isThreeLine: true, // дает больше высоты тайлу
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
         subtitle: Text(subtitle),
-        trailing: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(price, style: const TextStyle(fontWeight: FontWeight.w700)),
-            const SizedBox(height: 6),
-            FilledButton(
-              onPressed: onPressed,
-              child: const Text('Продолжить'),
-            ),
-          ],
+
+        trailing: SizedBox(
+          width: 140, // место под цену + кнопку (подбери под дизайн)
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Align(
+                alignment: Alignment.centerRight,
+                child: Text(price, style: const TextStyle(fontWeight: FontWeight.w700)),
+              ),
+              const SizedBox(height: 8),
+              FilledButton(
+                onPressed: onPressed,
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size.fromHeight(32), // можно 36 если нужно компактнее
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                ),
+                child: const Text('Продолжить'),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
+

@@ -4,6 +4,8 @@ import 'package:apphud/apphud.dart';
 import 'package:apphud/models/apphud_models/apphud_attribution_data.dart';
 import 'package:apphud/models/apphud_models/apphud_attribution_provider.dart';
 import 'package:apphud/models/apphud_models/apphud_composite_model.dart';
+import 'package:apphud/models/apphud_models/apphud_debug_level.dart';
+import 'package:apphud/models/apphud_models/apphud_error.dart';
 import 'package:apphud/models/apphud_models/apphud_paywall.dart';
 import 'package:apphud/models/apphud_models/apphud_paywalls.dart';
 import 'package:apphud/models/apphud_models/apphud_placement.dart';
@@ -22,37 +24,45 @@ class ApphudMonetizationService implements MonetizationService {
 
   ApphudPaywalls? _paywallsCache;
   List<ApphudPlacement> _placementsCache = const [];
+
   bool _inited = false;
+  bool _syncInProgress = false;
 
   @override
   Future<void> init() async {
     if (_inited) return;
 
+    // Must be called before SDK initialization. [web:57]
+    await Apphud.enableDebugLogs(level: ApphudDebugLevel.high); // [web:57]
+
     _listener = ApphudListenerBridge(
       onSubscriptionsUpdated: (_) async {
-        // можно просто обновлять кэш, но контроллер всё равно может дергать hasPremiumAccess()
+        await sync(force: true);
       },
-      onPaywallsLoaded: (pw) {
-        _paywallsCache = pw;
-      },
-      onPlacementsLoaded: (pl) {
-        _placementsCache = pl;
-      },
+      onPaywallsLoaded: (pw) => _paywallsCache = pw,
+      onPlacementsLoaded: (pl) => _placementsCache = pl,
     );
 
-    await Apphud.setListener(listener: _listener);
-    await Apphud.start(apiKey: _apiKey);
+    await Apphud.setListener(listener: _listener); // [web:57]
+    await Apphud.start(apiKey: _apiKey); // [web:57]
 
     if (Platform.isAndroid) {
-      await Apphud.collectDeviceIdentifiers();
+      await Apphud.collectDeviceIdentifiers(); // Android only [web:57]
     }
-
-    // прогрев
-    _paywallsCache = await Apphud.paywallsDidLoadCallback();
-    _placementsCache = await Apphud.placements();
 
     _inited = true;
   }
+
+  /// Для “всегда актуально” — вызывать с force:true перед показом paywall/onboarding и т.п.
+  Future<void> sync({bool force = true}) async {
+    if (!_inited) await init();
+
+    final placementsRes = await Apphud.fetchPlacements(forceRefresh: force);
+    _placementsCache = placementsRes.placements;
+
+    _paywallsCache = await Apphud.paywallsDidLoadCallback();
+  }
+
 
   @override
   Future<bool> hasPremiumAccess() => Apphud.hasPremiumAccess();
@@ -62,8 +72,11 @@ class ApphudMonetizationService implements MonetizationService {
 
   @override
   Future<ApphudPaywall?> getPaywall(String paywallId) async {
-    final paywalls = _paywallsCache ?? await Apphud.paywallsDidLoadCallback();
-    _paywallsCache = paywalls;
+    // Чтобы было “актуально”, форсим sync перед чтением.
+    await sync(force: true);
+
+    final paywalls = _paywallsCache;
+    if (paywalls == null) return null;
 
     try {
       return paywalls.paywalls.firstWhere((p) => p.identifier == paywallId);
@@ -73,54 +86,58 @@ class ApphudMonetizationService implements MonetizationService {
   }
 
   @override
-  Future<List<ApphudPlacement>> getPlacements({bool forceRefresh = false}) async {
-    if (!forceRefresh && _placementsCache.isNotEmpty) return _placementsCache;
+  Future<List<ApphudPlacement>> getPlacements({bool forceRefresh = true}) async {
+    if (forceRefresh) {
+      await sync(force: true);
+      return _placementsCache;
+    }
 
-    final res = await Apphud.fetchPlacements(forceRefresh: forceRefresh);
-    _placementsCache = res.placements;
+    if (_placementsCache.isEmpty) {
+      await sync(force: true);
+    }
     return _placementsCache;
   }
 
   @override
   Future<ApphudPurchaseResult> purchase({required ApphudProduct product}) {
-    return Apphud.purchase(product: product);
+    return Apphud.purchase(product: product); // [web:57]
   }
 
   @override
-  Future<ApphudComposite> restorePurchases() => Apphud.restorePurchases();
+  Future<ApphudComposite> restorePurchases() => Apphud.restorePurchases(); // [web:57]
 
   @override
   Future<void> sendAppsFlyerAttribution({
     required Map<String, dynamic> rawData,
     String? appsFlyerId,
-  }) {
-    return Apphud.setAttribution(
+  }) async {
+    await Apphud.setAttribution(
       provider: ApphudAttributionProvider.appsFlyer,
       data: ApphudAttributionData(rawData: rawData),
       identifier: appsFlyerId,
-    );
+    ); // [web:57]
   }
 
   @override
   Future<void> sendFirebaseAttribution({
     required Map<String, dynamic> rawData,
     String? firebaseInstanceId,
-  }) {
-    return Apphud.setAttribution(
+  }) async {
+    await Apphud.setAttribution(
       provider: ApphudAttributionProvider.firebase,
       data: ApphudAttributionData(rawData: rawData),
       identifier: firebaseInstanceId,
-    );
+    ); // [web:57]
   }
 
   @override
   Future<void> sendAppleSearchAdsAttribution() async {
-    final data = await Apphud.collectSearchAdsAttribution();
-    if (data == null) return;
+    if (!Platform.isIOS) return;
 
-    await Apphud.setAttribution(
-      provider: ApphudAttributionProvider.appleAdsAttribution,
-      data: ApphudAttributionData(rawData: data),
-    );
+    // iOS only. Send search ads attribution data to Apphud. [web:57]
+    // final ApphudError? err = await Apphud.collectSearchAdsAttribution(); // [web:57]
+    // if (err != null) {
+    //   // по желанию залогируй err
+    // }
   }
 }

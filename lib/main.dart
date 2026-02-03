@@ -1,5 +1,9 @@
+import 'dart:io';
+
 import 'package:android_id/android_id.dart';
+import 'package:app_tracking_transparency/app_tracking_transparency.dart';
 import 'package:apphud/apphud.dart';
+import 'package:apphud/models/apphud_models/apphud_debug_level.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -13,9 +17,11 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await getATT();
   await EasyLocalization.ensureInitialized();
   await Firebase.initializeApp(
   );
+
   await initAppsFlyer();
   await initApphud();
   await MobileAds.instance.initialize();
@@ -28,26 +34,39 @@ Future<void> main() async {
 }
 Future<void> initApphud() async {
  try{
-   // await Apphud.start(apiKey: "app_oJZektLcFSnSRqqmVntw19S16yu29M",);
+   await Apphud.enableDebugLogs(level: ApphudDebugLevel.high);
+
+
+   // await Apphud.start(apiKey: "app_Z44sHCCXqhP5FCBDa8SxKBLB7VLpga",observerMode: true);
+
  }catch(e){
    print(e);
  }
 
 }
+Future<void> getATT() async {
+  if(Platform.isIOS){
+    final status = await AppTrackingTransparency.requestTrackingAuthorization();
+
+  }
+}
 Future<void> initAppsFlyer()async {
+  print("initAppsFlyer");
+
   final AppsFlyerOptions options = AppsFlyerOptions(
-      afDevKey: "zhAZ8YphwvfNovsjD8jttB",
-      appId: "6749377146",
+      afDevKey: "wWnc2go5ZMLf9xRNFtwAj3",
+      appId: "6757518897",
       showDebug: true,
-      timeToWaitForATTUserAuthorization: 15,
+      timeToWaitForATTUserAuthorization: 30,
       manualStart: true);
   AppsflyerSdk _appsflyerSdk = AppsflyerSdk(options);
 
-
   await _appsflyerSdk.initSdk(
+
       registerConversionDataCallback: true,
       registerOnAppOpenAttributionCallback: true,
       registerOnDeepLinkingCallback: true);
+
 
 
   _appsflyerSdk.startSDK(
@@ -65,6 +84,7 @@ Future<void> initAppmetrica() async {
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
+  //убрал для заупска ios
   static FirebaseAnalytics analytics = FirebaseAnalytics.instance;
   static FirebaseAnalyticsObserver observer =
   FirebaseAnalyticsObserver(analytics: analytics);
