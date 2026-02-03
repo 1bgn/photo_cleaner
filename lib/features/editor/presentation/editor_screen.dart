@@ -8,6 +8,7 @@ import '../../../core/di/di.dart';
 import '../../gallery/presentation/gallery_screen.dart';
 import '../../monetization/presentation/main_paywall_sheet.dart';
 import '../../monetization/presentation/monetization_controller.dart';
+import '../../monetization/presentation/subscription_status_sheet.dart';
 import 'editor_controller.dart';
 import 'widgets/action_fabs.dart';
 import 'widgets/blur_strength_slider.dart';
@@ -159,26 +160,34 @@ class _EditorScreenState extends State<EditorScreen> {
       final selection = c.selectionMode.watch(context);
 
       return Scaffold(
-        appBar: AppBar(
-          actions: [
-            IconButton(
-              key: const Key("1"),
-              tooltip: 'localGallery'.tr(),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const GalleryScreen()),
-                );
-              },
-              icon: const Icon(Icons.photo_library_outlined),
-            ),
-            IconButton(
-              tooltip: 'maskSettings'.tr(),
-              onPressed: (raw == null || busy) ? null : _openMaskSettings,
-              icon: const Icon(Icons.tune),
-            ),
-          ],
-        ),
+        appBar:  AppBar(
+      actions: [
+      IconButton(
+      key: const Key("1"),
+      tooltip: 'localGallery'.tr(),
+      onPressed: () {
+      Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const GalleryScreen()),
+      );
+      },
+      icon: const Icon(Icons.photo_library_outlined),
+      ),
+
+      IconButton(
+      tooltip: 'checkSubscriptionTitle'.tr(),
+      onPressed: () => SubscriptionStatusSheet.show(context),
+      icon: const Icon(Icons.verified_outlined),
+      ),
+
+      IconButton(
+      tooltip: 'maskSettings'.tr(),
+      onPressed: (raw == null || busy) ? null : _openMaskSettings,
+      icon: const Icon(Icons.tune),
+      ),
+      ],
+      ),
+
         floatingActionButton: ActionFabs(
           controller: c,
           onSave: _onSave,

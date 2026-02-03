@@ -8,7 +8,14 @@
   "deleteAllSavedImages": "Delete all saved images?",
   "cancel": "Cancel",
   "delete": "Delete",
-  "deleteFromLocalGallery": "Delete the image from the local gallery?",
+  "checkSubscriptionTitle": "Subscription check",
+  "subscriptionStatusTitle": "Status",
+  "subscriptionStatusActive": "Subscription is active",
+  "subscriptionStatusInactive": "No active subscription",
+  "checkAgain": "Check again",
+  "close": "Close",
+
+"deleteFromLocalGallery": "Delete the image from the local gallery?",
   "subscriptionAlreadyActive": "Subscription is already active",
   "paywallNotLoaded": "Paywall not loaded",
   "billedWeekly": "Billed weekly",
@@ -31,5 +38,9 @@
   "localGallery": "Local gallery",
   "maskSettings": "Mask settings",
   "objectSelectionMode": "Object selection mode",
+  "maskFeather": "Feather",
+  "maskThreshold": "Threshold",
+  "maskSoftness": "Softness",
+  "apply": "Apply",
   "removeAllBackgroundLocal": "Remove the entire background (locally)"
 }

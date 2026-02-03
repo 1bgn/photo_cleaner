@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
 import '../editor_controller.dart';
@@ -27,7 +28,7 @@ class _MaskSettingsSheetState extends State<MaskSettingsSheet> {
   @override
   Widget build(BuildContext context) {
     Widget sliderRow(
-        String title,
+        String titleKey,
         double value,
         String label,
         double min,
@@ -40,7 +41,7 @@ class _MaskSettingsSheetState extends State<MaskSettingsSheet> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('$title: $label'),
+            Text('${titleKey.tr()}: $label'),
             Slider(
               value: value,
               min: min,
@@ -65,13 +66,13 @@ class _MaskSettingsSheetState extends State<MaskSettingsSheet> {
         mainAxisSize: MainAxisSize.min,
         children: [
           const SizedBox(height: 6),
-          const Text(
-            'Настройки маски',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          Text(
+            'maskSettings'.tr(),
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 10),
           sliderRow(
-            'Feather',
+            'maskFeather',
             tempFeather,
             tempFeather.toStringAsFixed(1),
             0.0,
@@ -80,7 +81,7 @@ class _MaskSettingsSheetState extends State<MaskSettingsSheet> {
                 (v) => setState(() => tempFeather = v),
           ),
           sliderRow(
-            'Threshold',
+            'maskThreshold',
             tempThreshold,
             tempThreshold.toStringAsFixed(2),
             0.0,
@@ -89,7 +90,7 @@ class _MaskSettingsSheetState extends State<MaskSettingsSheet> {
                 (v) => setState(() => tempThreshold = v),
           ),
           sliderRow(
-            'Softness',
+            'maskSoftness',
             tempSoftness,
             tempSoftness.toStringAsFixed(2),
             0.0,
@@ -102,7 +103,7 @@ class _MaskSettingsSheetState extends State<MaskSettingsSheet> {
             children: [
               TextButton(
                 onPressed: () => Navigator.pop(context, false),
-                child: const Text('Отмена'),
+                child: Text('cancel'.tr()),
               ),
               const Spacer(),
               FilledButton(
@@ -114,7 +115,7 @@ class _MaskSettingsSheetState extends State<MaskSettingsSheet> {
                   );
                   Navigator.pop(context, true);
                 },
-                child: const Text('Применить'),
+                child: Text('apply'.tr()),
               ),
             ],
           ),
