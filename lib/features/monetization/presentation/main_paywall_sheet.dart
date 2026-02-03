@@ -1,6 +1,7 @@
 import 'package:apphud/apphud.dart';
 import 'package:apphud/models/apphud_models/apphud_paywall.dart';
 import 'package:apphud/models/apphud_models/apphud_product.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:signals/signals_flutter.dart';
 
@@ -84,7 +85,6 @@ class _MainPaywallSheetState extends State<MainPaywallSheet> {
 
       final maxH = MediaQuery.of(context).size.height * 0.85;
 
-
       if (premium) {
         return SafeArea(
           child: ConstrainedBox(
@@ -109,14 +109,14 @@ class _MainPaywallSheetState extends State<MainPaywallSheet> {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  const Text(
-                    'Подписка уже активна ✅',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  Text(
+                    'subscriptionAlreadyActive'.tr(),
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 12),
                   FilledButton(
                     onPressed: busy ? null : () => Navigator.pop(context),
-                    child: const Text('Ок'),
+                    child: Text('ok'.tr()),
                   ),
                 ],
               ),
@@ -163,11 +163,11 @@ class _MainPaywallSheetState extends State<MainPaywallSheet> {
 
                 if (pw == null) ...[
                   const SizedBox(height: 12),
-                  const Text('Paywall не загружен'),
+                  Text('paywallNotLoaded'.tr()),
                 ] else ...[
                   _PlanTile(
                     title: 'Weekly',
-                    subtitle: 'Списывается каждую неделю',
+                    subtitle: 'billedWeekly'.tr(),
                     price: weekly == null ? '—' : _priceLabel(weekly),
                     highlighted: true,
                     onPressed: (busy || weekly == null) ? null : () => _buy('sonicforge_weekly'),
@@ -175,7 +175,7 @@ class _MainPaywallSheetState extends State<MainPaywallSheet> {
                   const SizedBox(height: 10),
                   _PlanTile(
                     title: 'Monthly',
-                    subtitle: 'Самый выгодный вариант',
+                    subtitle: 'bestValue'.tr(),
                     price: monthly == null ? '—' : _priceLabel(monthly),
                     highlighted: false,
                     onPressed: (busy || monthly == null) ? null : () => _buy('sonicforge_monthly'),
@@ -193,12 +193,12 @@ class _MainPaywallSheetState extends State<MainPaywallSheet> {
                         if (!mounted) return;
                         if (c.hasPremium.value) Navigator.pop(context);
                       },
-                      child: const Text('Restore purchases'),
+                      child: Text('restorePurchases'.tr()),
                     ),
                     const Spacer(),
                     FilledButton(
                       onPressed: busy ? null : () => Navigator.pop(context),
-                      child: const Text('Не сейчас'),
+                      child: Text('notNow'.tr()),
                     ),
                   ],
                 ),
@@ -216,14 +216,14 @@ class _Benefits extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Column(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Что даёт Pro:', style: TextStyle(fontWeight: FontWeight.w700)),
-        SizedBox(height: 8),
-        _Bullet('Без рекламы'),
-        _Bullet('Больше обработок / лимитов'),
-        _Bullet('HD экспорт'),
+        Text('proBenefitsTitle'.tr(), style: const TextStyle(fontWeight: FontWeight.w700)),
+        const SizedBox(height: 8),
+        _Bullet('noAds'.tr()),
+        _Bullet('moreProcessingLimits'.tr()),
+        _Bullet('hdExport'.tr()),
       ],
     );
   }
@@ -274,14 +274,12 @@ class _PlanTile extends StatelessWidget {
         ),
       ),
       child: ListTile(
-        isThreeLine: true, // дает больше высоты тайлу
+        isThreeLine: true,
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
         subtitle: Text(subtitle),
-
         trailing: SizedBox(
-          width: 140, // место под цену + кнопку (подбери под дизайн)
+          width: 140,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -294,11 +292,11 @@ class _PlanTile extends StatelessWidget {
               FilledButton(
                 onPressed: onPressed,
                 style: FilledButton.styleFrom(
-                  minimumSize: const Size.fromHeight(32), // можно 36 если нужно компактнее
+                  minimumSize: const Size.fromHeight(32),
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                 ),
-                child: const Text('Продолжить'),
+                child: Text('continue'.tr()),
               ),
             ],
           ),
@@ -307,4 +305,3 @@ class _PlanTile extends StatelessWidget {
     );
   }
 }
-

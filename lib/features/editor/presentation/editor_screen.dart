@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:signals/signals_flutter.dart';
 
@@ -36,53 +39,53 @@ class _EditorScreenState extends State<EditorScreen> {
 
   Future<void> _onSave() async {
     if (c.rawImage.value == null) return;
-    //показ банеера
-    final m = getIt<MonetizationController>();
-    await m.init();
 
-    if (!m.hasPremium.value) {
-      await MainPaywallSheet.show(context);
-      await m.refreshStatus();
-      m.hasActiveSubscription().then((e){
-        print("vreabvaer ${e}");
-        print("vreabvaer ${m.hasPremium}");
-      });
-      if (!m.hasPremium.value) return;
+    // paywall for iOS
+    if (Platform.isIOS) {
+      final m = getIt<MonetizationController>();
+      await m.init();
+
+      if (!m.hasPremium.value) {
+        await MainPaywallSheet.show(context);
+        await m.refreshStatus();
+        if (!m.hasPremium.value) return;
+      }
     }
+
     final choice = await showDialog<int>(
       context: context,
       builder: (context) => SimpleDialog(
-        title: const Text('Сохранить'),
+        title: Text('save'.tr()),
         children: [
           SimpleDialogOption(
             onPressed: () => Navigator.pop(context, 1),
-            child: const ListTile(
-              leading: Icon(Icons.folder),
-              title: Text('В локальную галерею'),
-              subtitle: Text('Сохранится внутри приложения'),
+            child: ListTile(
+              leading: const Icon(Icons.folder),
+              title: Text('toTheLocalGallery'.tr()),
+              subtitle: Text('savedInsideApp'.tr()),
             ),
           ),
           SimpleDialogOption(
             onPressed: () => Navigator.pop(context, 2),
-            child: const ListTile(
-              leading: Icon(Icons.photo),
-              title: Text('В галерею устройства'),
-              subtitle: Text('Photos / Gallery'),
+            child: ListTile(
+              leading: const Icon(Icons.photo),
+              title: Text('toDeviceGallery'.tr()),
+              subtitle: Text('photosOrGallery'.tr()),
             ),
           ),
           SimpleDialogOption(
             onPressed: () => Navigator.pop(context, 3),
-            child: const ListTile(
-              leading: Icon(Icons.photo_library_outlined),
-              title: Text('Открыть локальную галерею'),
+            child: ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: Text('openLocalGallery'.tr()),
             ),
           ),
           const Divider(height: 1),
           SimpleDialogOption(
             onPressed: () => Navigator.pop(context, 0),
-            child: const Align(
+            child: Align(
               alignment: Alignment.centerRight,
-              child: Text('Отмена'),
+              child: Text('cancel'.tr()),
             ),
           ),
         ],
@@ -109,7 +112,7 @@ class _EditorScreenState extends State<EditorScreen> {
         await c.saveToLocalGallery(asDisplayed: true);
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Сохранено в локальную галерею')),
+          SnackBar(content: Text('savedToLocalGallery'.tr())),
         );
         return;
       }
@@ -118,20 +121,23 @@ class _EditorScreenState extends State<EditorScreen> {
         final savedPath = await c.saveFinalImageToGallery();
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Сохранено: ${savedPath ?? "успешно"}')),
+          SnackBar(
+            content: Text(
+              '${"saved".tr()}: ${savedPath ?? "successfully".tr()}',
+            ),
+          ),
         );
         return;
       }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Ошибка сохранения: $e')),
+        SnackBar(content: Text('${"saveError".tr()}: $e')),
       );
     } finally {
       c.isProcessing.value = false;
     }
   }
-
 
   Future<void> _openMaskSettings() async {
     if (!mounted) return;
@@ -155,10 +161,9 @@ class _EditorScreenState extends State<EditorScreen> {
       return Scaffold(
         appBar: AppBar(
           actions: [
-
             IconButton(
-              key: Key("1"),
-              tooltip: 'Локальная галерея',
+              key: const Key("1"),
+              tooltip: 'localGallery'.tr(),
               onPressed: () {
                 Navigator.push(
                   context,
@@ -167,9 +172,8 @@ class _EditorScreenState extends State<EditorScreen> {
               },
               icon: const Icon(Icons.photo_library_outlined),
             ),
-
             IconButton(
-              tooltip: 'Настройки маски',
+              tooltip: 'maskSettings'.tr(),
               onPressed: (raw == null || busy) ? null : _openMaskSettings,
               icon: const Icon(Icons.tune),
             ),
@@ -186,7 +190,7 @@ class _EditorScreenState extends State<EditorScreen> {
             child: Column(
               children: [
                 SwitchListTile.adaptive(
-                  title: const Text('Режим выделения объектов'),
+                  title: Text('objectSelectionMode'.tr()),
                   value: selection,
                   onChanged: busy ? null : (v) => c.toggleSelectionMode(v),
                 ),
@@ -197,7 +201,7 @@ class _EditorScreenState extends State<EditorScreen> {
                         ? null
                         : c.removeBackgroundLocally,
                     icon: const Icon(Icons.layers_clear),
-                    label: const Text('Удалить весь фон (локально)'),
+                    label: Text('removeAllBackgroundLocal'.tr()),
                   ),
                 ),
                 BlurStrengthSlider(controller: c),

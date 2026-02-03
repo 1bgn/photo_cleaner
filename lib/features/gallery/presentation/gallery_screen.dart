@@ -11,6 +11,7 @@ import 'gallery_controller.dart';
 import 'viewer_screen.dart';
 import 'package:appmetrica_plugin/appmetrica_plugin.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+
 class GalleryScreen extends StatefulWidget {
   const GalleryScreen({super.key});
 
@@ -20,6 +21,7 @@ class GalleryScreen extends StatefulWidget {
 
 class _GalleryScreenState extends State<GalleryScreen> {
   late final GalleryController c;
+
   @override
   void initState() {
     super.initState();
@@ -27,8 +29,6 @@ class _GalleryScreenState extends State<GalleryScreen> {
     c.load();
     c.initBanner();
     AppMetrica.reportEvent(EventKeys.openGalleryEvent);
-
-
   }
 
   @override
@@ -40,21 +40,27 @@ class _GalleryScreenState extends State<GalleryScreen> {
 
       return Scaffold(
         appBar: AppBar(
-          title:  Text('localGallery'.tr()),
+          title: Text('localGallery'.tr()),
           actions: [
             IconButton(
-              tooltip: 'Очистить',
+              tooltip: 'clear'.tr(),
               onPressed: items.isEmpty
                   ? null
                   : () async {
                 final ok = await showDialog<bool>(
                   context: context,
                   builder: (_) => AlertDialog(
-                    title: const Text('Очистить галерею'),
-                    content: const Text('Удалить все сохранённые изображения?'),
+                    title: Text('clearGallery'.tr()),
+                    content: Text('deleteAllSavedImages'.tr()),
                     actions: [
-                      TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Отмена')),
-                      TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Удалить')),
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        child: Text('cancel'.tr()),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, true),
+                        child: Text('delete'.tr()),
+                      ),
                     ],
                   ),
                 );
@@ -80,7 +86,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
               ),
             Expanded(
               child: items.isEmpty
-                  ?  Center(child: Text('hereIsEmpty'.tr()))
+                  ? Center(child: Text('hereIsEmpty'.tr()))
                   : GridView.builder(
                 padding: const EdgeInsets.all(12),
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -92,7 +98,6 @@ class _GalleryScreenState extends State<GalleryScreen> {
                 itemBuilder: (_, i) => _Thumb(
                   item: items[i],
                   onOpen: () async {
-
                     await Navigator.push(
                       context,
                       MaterialPageRoute(builder: (_) => ViewerScreen(item: items[i])),
@@ -131,11 +136,17 @@ class _Thumb extends StatelessWidget {
         final ok = await showDialog<bool>(
           context: context,
           builder: (_) => AlertDialog(
-            title: const Text('Удалить'),
-            content: const Text('Удалить изображение из локальной галереи?'),
+            title: Text('delete'.tr()),
+            content: Text('deleteFromLocalGallery'.tr()),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Отмена')),
-              TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Удалить')),
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: Text('cancel'.tr()),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: Text('delete'.tr()),
+              ),
             ],
           ),
         );
