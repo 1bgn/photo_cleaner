@@ -53,14 +53,28 @@ class ApphudMonetizationService implements MonetizationService {
     _inited = true;
   }
 
-  /// Для “всегда актуально” — вызывать с force:true перед показом paywall/onboarding и т.п.
+  Future<void>? _syncFuture;
+
   Future<void> sync({bool force = true}) async {
     if (!_inited) await init();
 
-    final placementsRes = await Apphud.fetchPlacements(forceRefresh: force);
-    _placementsCache = placementsRes.placements;
+    // если sync уже идёт — просто ждём его
+    final inFlight = _syncFuture;
+    if (inFlight != null) return inFlight;
 
-    _paywallsCache = await Apphud.paywallsDidLoadCallback();
+    final f = () async {
+      final placementsRes = await Apphud.fetchPlacements(forceRefresh: force);
+      _placementsCache = placementsRes.placements;
+
+      _paywallsCache = await Apphud.paywallsDidLoadCallback();
+    }();
+
+    _syncFuture = f;
+    try {
+      await f;
+    } finally {
+      _syncFuture = null;
+    }
   }
 
 

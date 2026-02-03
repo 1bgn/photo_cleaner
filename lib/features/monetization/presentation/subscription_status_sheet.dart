@@ -31,14 +31,8 @@ class _SubscriptionStatusSheetState extends State<SubscriptionStatusSheet> {
     _check();
   }
 
-  Future<void> _check() async {
-    try {
-      await c.init(); // на случай, если Apphud ещё не инициализирован
-      await c.hasActiveSubscription();
-    } catch (e) {
-      // если хочешь — можешь записать в c.error, но init/покупки уже это делают
-    }
-  }
+  Future<void> _check() => c.checkSubscriptionStatus(forceSync: true);
+
 
   @override
   Widget build(BuildContext context) {

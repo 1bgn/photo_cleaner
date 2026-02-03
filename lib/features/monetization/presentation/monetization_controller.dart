@@ -4,6 +4,7 @@ import 'package:apphud/models/apphud_models/apphud_paywall.dart';
 import 'package:injectable/injectable.dart';
 import 'package:signals/signals.dart';
 
+import '../data/apphud_monetization_service.dart';
 import '../domain/monetization_service.dart';
 
 @injectable
@@ -49,6 +50,26 @@ class MonetizationController {
     hasSubcription.value = sub;
     return sub;
   }
+  Future<void> checkSubscriptionStatus({bool forceSync = true}) async {
+    try {
+      isBusy.value = true;
+      error.value = null;
+
+      await _service.init();
+
+      if (forceSync && _service is ApphudMonetizationService) {
+        await (_service as ApphudMonetizationService).sync(force: true);
+      }
+
+      hasSubcription.value = await _service.hasActiveSubscription();
+      hasPremium.value = await _service.hasPremiumAccess();
+    } catch (e) {
+      error.value = '$e';
+    } finally {
+      isBusy.value = false;
+    }
+  }
+
   Future<void> buyWeekly() => _buyByProductId('sonicforge_weekly');
   Future<void> buyMonthly() => _buyByProductId('sonicforge_monthly');
 
